@@ -1,0 +1,37 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Left-Hub"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Hub-Outpost"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Outpost-Hub"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Hub-Crude"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}
