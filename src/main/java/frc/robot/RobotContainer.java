@@ -14,16 +14,22 @@ import com.pathplanner.lib.commands.FollowPathCommand;
 import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.ShooterSubsystem;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -37,6 +43,9 @@ public class RobotContainer {
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
     private final SwerveRequest.RobotCentric forwardStraight = new SwerveRequest.RobotCentric()
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+    
+    private final ShooterSubsystem m_shooter = new ShooterSubsystem();
+    private final ClimberSubsystem m_climber = new ClimberSubsystem();
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
@@ -92,6 +101,28 @@ public class RobotContainer {
 
         // Reset the field-centric heading on left bumper press.
         joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+
+        // When Y is held: Run flywheel. 
+        // When flywheel isReady, the sushi rollers will trigger (Sequential Command)
+        joystick.y().whileTrue(
+            m_shooter.runOnce(() -> m_shooter.runFlywheel(50)) // Start Flywheel
+            .andThen(new WaitUntilCommand(() -> m_shooter.isReady(50))) // Wait for spin-up
+            .andThen(m_shooter.runEnd(() -> m_shooter.runSushi(10), m_shooter::stopAll)) // Feed note
+    );
+    joystick.a().whileTrue(
+        new RunCommand(() -> m_climber.setPower(1.0), m_climber)
+    ).onFalse(new InstantCommand(m_climber::stop, m_climber));
+
+    // Manual Control: While B is held, climb down.
+    joystick.b().whileTrue(
+        new RunCommand(() -> m_climber.setPower(-1.0), m_climber)
+    ).onFalse(new InstantCommand(m_climber::stop, m_climber));
+
+    // 3. Endgame Auto-Climb Trigger
+    // Trigger fires when the match timer is > 130 seconds
+    new Trigger(() -> Timer.getMatchTime() <= 20 && Timer.getMatchTime() > 0)
+        .onTrue(new RunCommand(() -> m_climber.setPower(1.0), m_climber)
+        .withTimeout(3)); // Automatically stop after 3 seconds
 
         drivetrain.registerTelemetry(logger::telemeterize);
     }
