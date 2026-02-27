@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
@@ -29,6 +30,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 
 public class RobotContainer {
@@ -45,7 +47,8 @@ public class RobotContainer {
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
     
     private final ShooterSubsystem m_shooter = new ShooterSubsystem();
-    private final ClimberSubsystem m_climber = new ClimberSubsystem();
+    //private final ClimberSubsystem m_climber = new ClimberSubsystem();
+    private final IntakeSubsystem m_intake = new IntakeSubsystem();
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
@@ -100,31 +103,54 @@ public class RobotContainer {
         joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
         // Reset the field-centric heading on left bumper press.
-        joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        //joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
-        // When Y is held: Run flywheel. 
-        // When flywheel isReady, the sushi rollers will trigger (Sequential Command)
         joystick.y().whileTrue(
             m_shooter.runOnce(() -> m_shooter.runFlywheel(50)) // Start Flywheel
             .andThen(new WaitUntilCommand(() -> m_shooter.isReady(50))) // Wait for spin-up
             .andThen(m_shooter.runEnd(() -> m_shooter.runSushi(10), m_shooter::stopAll)) // Feed note
-    );
-    joystick.a().whileTrue(
-        new RunCommand(() -> m_climber.setPower(1.0), m_climber)
-    ).onFalse(new InstantCommand(m_climber::stop, m_climber));
+        );
+        joystick.x().whileTrue(
+            new RunCommand(() -> {
+                m_intake.setPivotPosition(15.0);
+                m_intake.runRollers(0.75);
+            }, m_intake)
+        ).onFalse(
+            new RunCommand(() -> {
+                m_intake.setPivotPosition(0.0);
+                m_intake.stopRollers();
+            }, m_intake)
+        );
+
+        joystick.leftBumper().whileTrue(
+            new StartEndCommand(
+                () -> m_intake.runRollers(-0.5),
+                () -> m_intake.stopRollers(),
+                m_intake
+            )
+        );
+        //joystick.leftBumper().whileTrue(
+        //   new RunCommand(() -> m_intake.runRollers(-0.5), m_intake)
+        //).onFalse(
+        //    new RunCommand(m_intake::stopRollers, m_intake)
+        //);
+
+    //joystick.a().whileTrue(
+    //    new RunCommand(() -> m_climber.setPower(1.0), m_climber)
+    //).onFalse(new InstantCommand(m_climber::stop, m_climber));
 
     // Manual Control: While B is held, climb down.
-    joystick.b().whileTrue(
-        new RunCommand(() -> m_climber.setPower(-1.0), m_climber)
-    ).onFalse(new InstantCommand(m_climber::stop, m_climber));
+    //joystick.b().whileTrue(
+    //    new RunCommand(() -> m_climber.setPower(-1.0), m_climber)
+    //).onFalse(new InstantCommand(m_climber::stop, m_climber));
 
     // 3. Endgame Auto-Climb Trigger
     // Trigger fires when the match timer is > 130 seconds
-    new Trigger(() -> Timer.getMatchTime() <= 20 && Timer.getMatchTime() > 0)
-        .onTrue(new RunCommand(() -> m_climber.setPower(1.0), m_climber)
-        .withTimeout(3)); // Automatically stop after 3 seconds
+    //new Trigger(() -> Timer.getMatchTime() <= 20 && Timer.getMatchTime() > 0)
+    //    .onTrue(new RunCommand(() -> m_climber.setPower(1.0), m_climber)
+    //    .withTimeout(3)); // Automatically stop after 3 seconds
 
-        drivetrain.registerTelemetry(logger::telemeterize);
+    //    drivetrain.registerTelemetry(logger::telemeterize);
     }
 
      public Command getAutonomousCommand() {
