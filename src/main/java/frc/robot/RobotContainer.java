@@ -62,6 +62,7 @@ public class RobotContainer {
     public RobotContainer() {
         autoChooser = AutoBuilder.buildAutoChooser();
         SmartDashboard.putData("Autonomous Chooser", autoChooser);
+        configureBindings();
     }
 
     private void configureBindings() {
@@ -105,52 +106,45 @@ public class RobotContainer {
         // Reset the field-centric heading on left bumper press.
         //joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
-        joystick.y().whileTrue(
-            m_shooter.runOnce(() -> m_shooter.runFlywheel(50)) // Start Flywheel
-            .andThen(new WaitUntilCommand(() -> m_shooter.isReady(50))) // Wait for spin-up
-            .andThen(m_shooter.runEnd(() -> m_shooter.runSushi(10), m_shooter::stopAll)) // Feed note
-        );
-        joystick.x().whileTrue(
-            new RunCommand(() -> {
-                m_intake.setPivotPosition(15.0);
-                m_intake.runRollers(0.75);
-            }, m_intake)
-        ).onFalse(
-            new RunCommand(() -> {
-                m_intake.setPivotPosition(0.0);
-                m_intake.stopRollers();
-            }, m_intake)
-        );
+        // Intake (Left Trigger) - Runs rollers while held, stops when released
+        joystick.leftTrigger()
+            .whileTrue(new RunCommand(() -> m_intake.runRollers(0.7), m_intake))
+            .onFalse(new InstantCommand(m_intake::stopRollers, m_intake));
 
-        joystick.leftBumper().whileTrue(
-            new StartEndCommand(
-                () -> m_intake.runRollers(-0.5),
-                () -> m_intake.stopRollers(),
-                m_intake
+        joystick.leftBumper()
+            .whileTrue(new RunCommand(() -> m_intake.runRollers(-0.5), m_intake))
+            .onFalse(new InstantCommand(m_intake::stopRollers, m_intake));
+
+        joystick.rightTrigger()
+            .whileTrue(
+                new RunCommand(() -> m_shooter.runFlywheel(80), m_shooter)
+                .alongWith(
+                    new WaitUntilCommand(() -> m_shooter.isReady(80))
+                    .andThen(new RunCommand(() -> m_shooter.runSushi(40), m_shooter))
+                )
             )
-        );
-        //joystick.leftBumper().whileTrue(
-        //   new RunCommand(() -> m_intake.runRollers(-0.5), m_intake)
-        //).onFalse(
-        //    new RunCommand(m_intake::stopRollers, m_intake)
-        //);
+            .onFalse(new InstantCommand(m_shooter::stopAll, m_shooter));
 
-    //joystick.a().whileTrue(
-    //    new RunCommand(() -> m_climber.setPower(1.0), m_climber)
-    //).onFalse(new InstantCommand(m_climber::stop, m_climber));
+        joystick.rightBumper()
+            .whileTrue(new RunCommand(() -> {
+                m_shooter.runFlywheel(80);
+                m_shooter.runSushi(40);
+            }, m_shooter))
+            .onFalse(new InstantCommand(m_shooter::stopAll, m_shooter));
 
-    // Manual Control: While B is held, climb down.
-    //joystick.b().whileTrue(
-    //    new RunCommand(() -> m_climber.setPower(-1.0), m_climber)
-    //).onFalse(new InstantCommand(m_climber::stop, m_climber));
+        joystick.povRight()
+            .whileTrue(new RunCommand(() -> m_intake.setPivotPosition(10), m_intake)) // Example setpoint
+            .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
 
-    // 3. Endgame Auto-Climb Trigger
-    // Trigger fires when the match timer is > 130 seconds
-    //new Trigger(() -> Timer.getMatchTime() <= 20 && Timer.getMatchTime() > 0)
-    //    .onTrue(new RunCommand(() -> m_climber.setPower(1.0), m_climber)
-    //    .withTimeout(3)); // Automatically stop after 3 seconds
+        joystick.povLeft()
+            .whileTrue(new RunCommand(() -> m_intake.setPivotPosition(0), m_intake)) // Example setpoint
+            .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
 
-    //    drivetrain.registerTelemetry(logger::telemeterize);
+        joystick.start().onTrue(new InstantCommand(() -> {
+            System.out.println("Gyro Reset Requested");
+        }));
+
+        //drivetrain.registerTelemetry(logger::telemeterize);
     }
 
      public Command getAutonomousCommand() {
