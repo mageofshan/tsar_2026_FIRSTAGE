@@ -9,6 +9,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.RelativeEncoder;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class IntakeSubsystem extends SubsystemBase {
@@ -32,15 +33,22 @@ public class IntakeSubsystem extends SubsystemBase {
         // Create configuration objects
         SparkMaxConfig pivotConfig = new SparkMaxConfig();
         SparkMaxConfig rollerConfig = new SparkMaxConfig();
+        
+        // Set conversion for 36:1 (360 / 36 = 10 degrees per motor rotation)
+        pivotConfig.encoder
+            .positionConversionFactor(360.0 / GEAR_RATIO) 
+            .velocityConversionFactor(360.0 / GEAR_RATIO / 60.0);
+
+        // Add P gain so the motor actually moves to the position
+        pivotConfig.closedLoop
+            .p(0.1) 
+            .outputRange(-0.5, 0.5);
 
         // Configure Pivot
         pivotConfig
             .idleMode(IdleMode.kBrake)
             .smartCurrentLimit(40);
         
-        pivotConfig.closedLoop
-            .outputRange(-0.5, 0.5);
-
         // Configure Rollers
         rollerConfig
             .idleMode(IdleMode.kCoast)
@@ -54,8 +62,28 @@ public class IntakeSubsystem extends SubsystemBase {
 
         pivotPID = pivotMotor.getClosedLoopController();
         pivotEncoder = pivotMotor.getEncoder();
+
+        // Ensure we start at 0
+        pivotEncoder.setPosition(0.0);
+        pivotConfig.closedLoop.p(0.1);
     }
 
+@Override
+    public void periodic() {
+        double currentPos = pivotEncoder.getPosition();
+
+        // 1. Check if we have reached the target (within 2 degrees)
+        if (Math.abs(currentPos - targetRotation) < 2.0) {
+            isAtTarget = true;
+        }
+
+        // 2. ONLY check for spikes if we have reached the target
+        if (isAtTarget && pivotMotor.getOutputCurrent() > SPIKE_THRESHOLD) {
+            pivotMotor.stopMotor();
+        }
+        SmartDashboard.putNumber("Intake/Degrees", pivotEncoder.getPosition());
+    }
+    
     public void runRollers(double speed) {
         rollerMotor.set(speed);
     }

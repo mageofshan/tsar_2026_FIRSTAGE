@@ -7,7 +7,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-
+import com.ctre.phoenix6.controls.DutyCycleOut;
 public class ShooterSubsystem extends SubsystemBase {
     // Flywheel motors (Master and Follower)
     private final TalonFX flywheelMotor1 = new TalonFX(40);
@@ -18,7 +18,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     private final VelocityVoltage m_velocitySetter = new VelocityVoltage(0);
 
-    private final com.ctre.phoenix6.controls.DutyCycleOut m_feederSetter = new com.ctre.phoenix6.controls.DutyCycleOut(0);
+    private final DutyCycleOut m_feederSetter = new DutyCycleOut(0);
 
     //Update the method to use percent output
     public void runSushiPercent(double percent) {
