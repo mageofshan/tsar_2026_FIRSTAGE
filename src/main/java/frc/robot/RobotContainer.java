@@ -76,7 +76,16 @@ public class RobotContainer {
                     .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
- 
+
+        // POV Right: Moves the arm OUT/DOWN at 20% power
+        joystick.povRight()
+        .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(0.2), m_intake))
+        .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
+        // POV Left: Moves the arm IN/UP at 20% power
+        joystick.povLeft()
+        .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(-0.2), m_intake))
+        .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
+
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
@@ -127,13 +136,14 @@ public class RobotContainer {
 
         joystick.rightTrigger()
             .whileTrue(
-                new RunCommand(() -> m_shooter.runFlywheel(80), m_shooter)
-                .alongWith(
-                    new WaitUntilCommand(() -> m_shooter.isReady(80))
-                    .andThen(new RunCommand(() -> m_shooter.runSushi(40), m_shooter))
-                )
-            )
+            new RunCommand(() -> m_shooter.runFlywheel(80), m_shooter)
+            .andThen(new WaitUntilCommand(() -> m_shooter.isReady(80)))
+// Use the percent method (e.g., 0.6 for 60% power) instead of 40 RPS
+            .andThen(new RunCommand(() -> m_shooter.runSushiPercent(0.6), m_shooter))
+)
             .onFalse(new InstantCommand(m_shooter::stopAll, m_shooter));
+
+
 
         joystick.rightBumper()
             .whileTrue(new RunCommand(() -> {
