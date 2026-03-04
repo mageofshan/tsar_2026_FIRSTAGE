@@ -89,6 +89,16 @@ public class RobotContainer {
             point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))
         ));
 
+        // Inside configureBindings() in RobotContainer.java
+        joystick.y().whileTrue(
+        // Step 1: Start and keep running the flywheel
+        m_shooter.run(() -> m_shooter.runFlywheel(50))
+        // Step 2: Wait until the speed is reached
+        .andThen(new WaitUntilCommand(() -> m_shooter.isReady(50)))
+        // Step 3: Run the sushi feeder at 60% power, then stop everything on release
+        .andThen(m_shooter.runEnd(() -> m_shooter.runSushiPercent(0.6), m_shooter::stopAll))
+        );
+
         joystick.povUp().whileTrue(drivetrain.applyRequest(() ->
             forwardStraight.withVelocityX(0.5).withVelocityY(0))
         );

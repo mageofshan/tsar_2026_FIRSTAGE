@@ -10,13 +10,21 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class ShooterSubsystem extends SubsystemBase {
     // Flywheel motors (Master and Follower)
-    private final TalonFX flywheelMotor1 = new TalonFX(30);
-    private final TalonFX flywheelMotor2 = new TalonFX(31);
+    private final TalonFX flywheelMotor1 = new TalonFX(40);
+    private final TalonFX flywheelMotor2 = new TalonFX(41);
     
     // Single feeder motor
-    private final TalonFX feederMotor1 = new TalonFX(32);
+    private final TalonFX feederMotor1 = new TalonFX(42);
 
     private final VelocityVoltage m_velocitySetter = new VelocityVoltage(0);
+
+    private final com.ctre.phoenix6.controls.DutyCycleOut m_feederSetter = new com.ctre.phoenix6.controls.DutyCycleOut(0);
+
+    //Update the method to use percent output
+    public void runSushiPercent(double percent) {
+    // percent is a value from -1.0 to 1.0
+    feederMotor1.setControl(m_feederSetter.withOutput(percent));
+    }
 
     public ShooterSubsystem() {
         // --- Flywheel Configuration ---
@@ -27,15 +35,19 @@ public class ShooterSubsystem extends SubsystemBase {
         flyConfig.Slot0.kA = 0.0092594;
         flyConfig.Slot0.kP = 0.11;
         flyConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-        
-        flywheelMotor1.getConfigurator().apply(flyConfig);
+        flyConfig.CurrentLimits.StatorCurrentLimit = 60; // 60 Amps is a safe limit for flywheels
+        flyConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+
+// Re-apply the config to the motor
+flywheelMotor1.getConfigurator().apply(flyConfig);
         
         // flywheelMotor2 mirrors flywheelMotor1
-        flywheelMotor2.setControl(new Follower(flywheelMotor1.getDeviceID(), MotorAlignmentValue.Aligned));
+        flywheelMotor2.setControl(new Follower(flywheelMotor1.getDeviceID(), MotorAlignmentValue.Opposed));
         
         // --- Feeder Configuration ---
         TalonFXConfiguration feederConfig = new TalonFXConfiguration();
         // You can add current limits or neutral modes to feederConfig here if needed
+        feederConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         feederMotor1.getConfigurator().apply(feederConfig);
     }
 
@@ -66,8 +78,9 @@ public class ShooterSubsystem extends SubsystemBase {
     /**
      * Checks if the flywheel is within 1 RPS of the target.
      */
-    public boolean isReady(double targetRPS) {
-        double currentRPS = flywheelMotor1.getVelocity().getValueAsDouble();
-        return Math.abs(targetRPS - currentRPS) < 1.0;
-    }
+    public boolean isReady(double targetRPS)
+{
+// Check if we are at least at 95% of the target speed
+return flywheelMotor1.getVelocity().getValueAsDouble() >= (targetRPS * 0.95);
+}
 }

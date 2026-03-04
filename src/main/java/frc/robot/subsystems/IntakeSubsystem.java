@@ -1,6 +1,7 @@
 package frc.robot.subsystems;
 
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
@@ -18,6 +19,14 @@ public class IntakeSubsystem extends SubsystemBase {
     // 2. Define Controller and Encoder
     private final SparkClosedLoopController pivotPID;
     private final RelativeEncoder pivotEncoder;
+
+    // Constants for your 36:1 setup
+    private final double GEAR_RATIO = 36.0;
+    private final double SPIKE_THRESHOLD = 35.0; // Amps
+
+    // State tracking for spike logic
+    private double targetRotation = 0;
+    private boolean isAtTarget = false;
 
     public IntakeSubsystem() {
         // Create configuration objects
@@ -55,8 +64,10 @@ public class IntakeSubsystem extends SubsystemBase {
         rollerMotor.stopMotor();
     }
 
-    public void setPivotPosition(double position) {
-        pivotPID.setSetpoint(position, SparkBase.ControlType.kPosition);
+    public void setPivotPosition(double positionDegrees) {
+        // The '0' at the end explicitly targets PID Slot 0
+        pivotPID.setSetpoint(positionDegrees, SparkBase.ControlType.kPosition, ClosedLoopSlot.kSlot0);
+
     }
 
     public void stopPivot() {
