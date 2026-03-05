@@ -83,6 +83,12 @@ public class IntakeSubsystem extends SubsystemBase {
         }
         SmartDashboard.putNumber("Intake/Degrees", pivotEncoder.getPosition());
     }
+
+    public void runPivotVoltage(double percent){
+        pivotMotor.set(percent);
+    }
+
+
     
     public void runRollers(double speed) {
         rollerMotor.set(speed);
