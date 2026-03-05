@@ -88,7 +88,6 @@ public class IntakeSubsystem extends SubsystemBase {
         pivotMotor.set(percent);
     }
 
-
     
     public void runRollers(double speed) {
         rollerMotor.set(speed);
