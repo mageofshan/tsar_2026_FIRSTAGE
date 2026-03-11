@@ -63,6 +63,7 @@ public class RobotContainer {
         autoChooser = AutoBuilder.buildAutoChooser();
         SmartDashboard.putData("Autonomous Chooser", autoChooser);
         configureBindings();
+        SmartDashboard.putString("Alliance shift", DriverStation.getAlliance().map(Enum::name).orElse("Unknown"));
     }
 
     private void configureBindings() {
