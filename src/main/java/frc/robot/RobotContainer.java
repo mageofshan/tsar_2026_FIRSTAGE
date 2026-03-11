@@ -14,16 +14,24 @@ import com.pathplanner.lib.commands.FollowPathCommand;
 import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.StartEndCommand;
+import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.IntakeSubsystem;
+import frc.robot.subsystems.ShooterSubsystem;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -37,6 +45,10 @@ public class RobotContainer {
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
     private final SwerveRequest.RobotCentric forwardStraight = new SwerveRequest.RobotCentric()
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+    
+    private final ShooterSubsystem m_shooter = new ShooterSubsystem();
+    //private final ClimberSubsystem m_climber = new ClimberSubsystem();
+    private final IntakeSubsystem m_intake = new IntakeSubsystem();
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
@@ -50,8 +62,8 @@ public class RobotContainer {
     public RobotContainer() {
         autoChooser = AutoBuilder.buildAutoChooser();
         SmartDashboard.putData("Autonomous Chooser", autoChooser);
+        configureBindings();
         SmartDashboard.putString("Alliance shift", DriverStation.getAlliance().map(Enum::name).orElse("Unknown"));
-
     }
 
     private void configureBindings() {
@@ -65,7 +77,16 @@ public class RobotContainer {
                     .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
- 
+
+        // POV Right: Moves the arm OUT/DOWN at 20% power
+        joystick.povRight()
+        .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(0.2), m_intake))
+        .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
+        // POV Left: Moves the arm IN/UP at 20% power
+        joystick.povLeft()
+        .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(-0.2), m_intake))
+        .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
+
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
@@ -77,6 +98,16 @@ public class RobotContainer {
         joystick.b().whileTrue(drivetrain.applyRequest(() ->
             point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))
         ));
+
+        // Inside configureBindings() in RobotContainer.java
+        joystick.y().whileTrue(
+        // Step 1: Start and keep running the flywheel
+        m_shooter.run(() -> m_shooter.runFlywheel(50))
+        // Step 2: Wait until the speed is reached
+        .andThen(new WaitUntilCommand(() -> m_shooter.isReady(50)))
+        // Step 3: Run the sushi feeder at 60% power, then stop everything on release
+        .andThen(m_shooter.runEnd(() -> m_shooter.runSushiPercent(0.6), m_shooter::stopAll))
+        );
 
         joystick.povUp().whileTrue(drivetrain.applyRequest(() ->
             forwardStraight.withVelocityX(0.5).withVelocityY(0))
@@ -93,9 +124,48 @@ public class RobotContainer {
         joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
         // Reset the field-centric heading on left bumper press.
-        joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        //joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
-        drivetrain.registerTelemetry(logger::telemeterize);
+        // Intake (Left Trigger) - Runs rollers while held, stops when released
+        joystick.leftTrigger()
+            .whileTrue(new RunCommand(() -> m_intake.runRollers(0.7), m_intake))
+            .onFalse(new InstantCommand(m_intake::stopRollers, m_intake));
+
+        joystick.leftBumper()
+            .whileTrue(new RunCommand(() -> m_intake.runRollers(-0.5), m_intake))
+            .onFalse(new InstantCommand(m_intake::stopRollers, m_intake));
+
+        joystick.rightTrigger()
+            .whileTrue(
+            new RunCommand(() -> m_shooter.runFlywheel(80), m_shooter)
+            .andThen(new WaitUntilCommand(() -> m_shooter.isReady(80)))
+// Use the percent method (e.g., 0.6 for 60% power) instead of 40 RPS
+            .andThen(new RunCommand(() -> m_shooter.runSushiPercent(0.6), m_shooter))
+)
+            .onFalse(new InstantCommand(m_shooter::stopAll, m_shooter));
+
+
+
+        joystick.rightBumper()
+            .whileTrue(new RunCommand(() -> {
+                m_shooter.runFlywheel(80);
+                m_shooter.runSushi(40);
+            }, m_shooter))
+            .onFalse(new InstantCommand(m_shooter::stopAll, m_shooter));
+
+        joystick.povRight()
+            .whileTrue(new RunCommand(() -> m_intake.setPivotPosition(10), m_intake)) // Example setpoint
+            .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
+
+        joystick.povLeft()
+            .whileTrue(new RunCommand(() -> m_intake.setPivotPosition(0), m_intake)) // Example setpoint
+            .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
+
+        joystick.start().onTrue(new InstantCommand(() -> {
+            System.out.println("Gyro Reset Requested");
+        }));
+
+        //drivetrain.registerTelemetry(logger::telemeterize);
     }
 
      public Command getAutonomousCommand() {
