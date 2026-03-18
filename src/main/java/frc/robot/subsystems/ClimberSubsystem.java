@@ -20,8 +20,11 @@ public class ClimberSubsystem extends SubsystemBase {
         
         //brake = no slip
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        
+        // resverse motor
         config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
 
+        // apply configuration
         climberMotor.getConfigurator().apply(config);
     }
 

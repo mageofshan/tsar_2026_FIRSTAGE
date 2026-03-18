@@ -33,7 +33,7 @@ public class IntakeSubsystem extends SubsystemBase {
         // Create configuration objects
         SparkMaxConfig pivotConfig = new SparkMaxConfig();
         SparkMaxConfig rollerConfig = new SparkMaxConfig();
-        
+
         // Set conversion for 36:1 (360 / 36 = 10 degrees per motor rotation)
         pivotConfig.encoder
             .positionConversionFactor(360.0 / GEAR_RATIO) 
@@ -68,7 +68,7 @@ public class IntakeSubsystem extends SubsystemBase {
         pivotConfig.closedLoop.p(0.1);
     }
 
-@Override
+    @Override
     public void periodic() {
         double currentPos = pivotEncoder.getPosition();
 
@@ -88,7 +88,7 @@ public class IntakeSubsystem extends SubsystemBase {
         pivotMotor.set(percent);
     }
 
-    
+
     public void runRollers(double speed) {
         rollerMotor.set(speed);
     }

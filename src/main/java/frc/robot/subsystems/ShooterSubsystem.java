@@ -20,26 +20,24 @@ public class ShooterSubsystem extends SubsystemBase {
 
     private final DutyCycleOut m_feederSetter = new DutyCycleOut(0);
 
-    //Update the method to use percent output
-    public void runSushiPercent(double percent) {
-    // percent is a value from -1.0 to 1.0
-    feederMotor1.setControl(m_feederSetter.withOutput(percent));
-    }
 
     public ShooterSubsystem() {
         // --- Flywheel Configuration ---
         TalonFXConfiguration flyConfig = new TalonFXConfiguration();
         
+        //flywheeel PIDF (to be tuned)
         flyConfig.Slot0.kS = 0.637; 
         flyConfig.Slot0.kV = 0.14002;
         flyConfig.Slot0.kA = 0.0092594;
         flyConfig.Slot0.kP = 0.11;
+
+        // natural spin down
         flyConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         flyConfig.CurrentLimits.StatorCurrentLimit = 60; // 60 Amps is a safe limit for flywheels
         flyConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-
-// Re-apply the config to the motor
-flywheelMotor1.getConfigurator().apply(flyConfig);
+        
+        // Re-apply the config to the motor
+        flywheelMotor1.getConfigurator().apply(flyConfig);
         
         // flywheelMotor2 mirrors flywheelMotor1
         flywheelMotor2.setControl(new Follower(flywheelMotor1.getDeviceID(), MotorAlignmentValue.Opposed));
@@ -57,6 +55,12 @@ flywheelMotor1.getConfigurator().apply(flyConfig);
      */
     public void runFlywheel(double rps) {
         flywheelMotor1.setControl(m_velocitySetter.withVelocity(rps));
+    }
+
+    //Update the method to use percent output
+    public void runSushiPercent(double percent) {
+    // percent is a value from -1.0 to 1.0
+    feederMotor1.setControl(m_feederSetter.withOutput(percent));
     }
 
     /**
@@ -82,5 +86,5 @@ flywheelMotor1.getConfigurator().apply(flyConfig);
 {
 // Check if we are at least at 95% of the target speed
 return flywheelMotor1.getVelocity().getValueAsDouble() >= (targetRPS * 0.95);
-}
+    }
 }
