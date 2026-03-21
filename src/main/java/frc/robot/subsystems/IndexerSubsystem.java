@@ -11,7 +11,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class IndexerSubsystem extends SubsystemBase {
 
-    private final SparkMax indexerMotor = new SparkMax(8, MotorType.kBrushless);
+    private final SparkMax indexerMotor = new SparkMax(52, MotorType.kBrushless);
 
     private static final int CURRENT_LIMIT = 20; // amps
 
@@ -35,7 +35,7 @@ public class IndexerSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         SmartDashboard.putNumber("Indexer/CurrentAmps", indexerMotor.getOutputCurrent());
-        SmartDashboard.putNumber("Indexer/Output",      indexerMotor.get());
+        SmartDashboard.putNumber("Indexer/Output", indexerMotor.get());
     }
 
     /**

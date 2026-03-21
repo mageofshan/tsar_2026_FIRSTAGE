@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 
@@ -40,6 +41,7 @@ public class RobotContainer {
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
     private final ShooterSubsystem m_shooter = new ShooterSubsystem();
+    private final IndexerSubsystem m_indexer = new IndexerSubsystem();
     private final IntakeSubsystem m_intake = new IntakeSubsystem();
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
@@ -114,6 +116,10 @@ public class RobotContainer {
         joystick.povLeft()
             .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(-0.2), m_intake))
             .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
+
+        joystick.x()
+            .whileTrue(new RunCommand(() -> m_indexer.run(0.9), m_indexer))
+            .onFalse(new InstantCommand(m_indexer::stop, m_indexer));
 
         // --- SHOOTER ---
         // Y Button: spin up to 50 RPS, wait until ready, then feed

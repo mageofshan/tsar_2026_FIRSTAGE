@@ -14,8 +14,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class IntakeSubsystem extends SubsystemBase {
     // 1. Define Motors (CANSparkMax is now SparkMax)
-    private final SparkMax rollerMotor = new SparkMax(6, MotorType.kBrushless);
-    private final SparkMax pivotMotor = new SparkMax(7, MotorType.kBrushless);
+    private final SparkMax rollerMotor = new SparkMax(53, MotorType.kBrushless);
+    private final SparkMax pivotMotor = new SparkMax(54, MotorType.kBrushless);
 
     // 2. Define Controller and Encoder
     private final SparkClosedLoopController pivotPID;
