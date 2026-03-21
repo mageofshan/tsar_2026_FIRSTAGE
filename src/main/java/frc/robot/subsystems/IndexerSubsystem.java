@@ -11,19 +11,23 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class IndexerSubsystem extends SubsystemBase {
 
-    private final SparkMax indexerMotor = new SparkMax(8, MotorType.kBrushless);
+    private final SparkMax indexerMotor = new SparkMax(52, MotorType.kBrushless);
 
     private static final int CURRENT_LIMIT = 20; // amps
 
-    private static final double FORWARD_SPEED =  0.6;
-    private static final double REVERSE_SPEED = -0.4;
+    private static final double FORWARD_SPEED =  0.8;
+    private static final double REVERSE_SPEED = -0.8;
 
     public IndexerSubsystem() {
         SparkMaxConfig config = new SparkMaxConfig();
 
         config
             .idleMode(IdleMode.kCoast)
-            .smartCurrentLimit(CURRENT_LIMIT);
+            .smartCurrentLimit(CURRENT_LIMIT)
+            .inverted(true);
+
+        // Ensure the motor object is inverted at runtime as well
+        indexerMotor.setInverted(true);
 
         indexerMotor.configure(
             config,
@@ -35,7 +39,7 @@ public class IndexerSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         SmartDashboard.putNumber("Indexer/CurrentAmps", indexerMotor.getOutputCurrent());
-        SmartDashboard.putNumber("Indexer/Output",      indexerMotor.get());
+        SmartDashboard.putNumber("Indexer/Output", indexerMotor.get());
     }
 
     /**
