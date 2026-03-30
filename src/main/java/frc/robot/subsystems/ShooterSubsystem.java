@@ -1,90 +1,111 @@
 package frc.robot.subsystems;
 
+import frc.robot.LimelightHelpers;
+import frc.robot.LimelightHelpers.RawFiducial;
+
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import com.ctre.phoenix6.controls.DutyCycleOut;
+import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+
 public class ShooterSubsystem extends SubsystemBase {
-    // Flywheel motors (Master and Follower)
+    //motors
     private final TalonFX flywheelMotor1 = new TalonFX(40);
     private final TalonFX flywheelMotor2 = new TalonFX(41);
-    
-    // Single feeder motor
     private final TalonFX feederMotor1 = new TalonFX(42);
 
+    // control objects
     private final VelocityVoltage m_velocitySetter = new VelocityVoltage(0);
+    private final VoltageOut m_voltageSetter = new VoltageOut(0);
+    
+    // shot map of distance to rpm
+    private final InterpolatingDoubleTreeMap shotMap = new InterpolatingDoubleTreeMap();
 
-    private final DutyCycleOut m_feederSetter = new DutyCycleOut(0);
+    public ShooterSubsystem() { 
+        configureMotors();
+        //test
+        shotMap.put(1.0, 1400.0);
+        shotMap.put(3.0, 1500.0);
+        shotMap.put(5.0, 1600.0);
+    }
 
-
-    public ShooterSubsystem() {
-        // --- Flywheel Configuration ---
+    private void configureMotors() {
         TalonFXConfiguration flyConfig = new TalonFXConfiguration();
-        
-        //flywheeel PIDF (to be tuned)
         flyConfig.Slot0.kS = 0.637; 
         flyConfig.Slot0.kV = 0.14002;
-        flyConfig.Slot0.kA = 0.0092594;
         flyConfig.Slot0.kP = 0.11;
-
-        // natural spin down
         flyConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-        flyConfig.CurrentLimits.StatorCurrentLimit = 60; // 60 Amps is a safe limit for flywheels
-        flyConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        
-        // Re-apply the config to the motor
+
         flywheelMotor1.getConfigurator().apply(flyConfig);
-        
-        // flywheelMotor2 mirrors flywheelMotor1
+        flywheelMotor2.getConfigurator().apply(flyConfig);
+
         flywheelMotor2.setControl(new Follower(flywheelMotor1.getDeviceID(), MotorAlignmentValue.Opposed));
         
-        // --- Feeder Configuration ---
-        TalonFXConfiguration feederConfig = new TalonFXConfiguration();
-        // You can add current limits or neutral modes to feederConfig here if needed
-        feederConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-        feederMotor1.getConfigurator().apply(feederConfig);
+        feederMotor1.setNeutralMode(NeutralModeValue.Brake);
     }
 
-    /**
-     * Runs the flywheel at a specific velocity.
-     * @param rps Rotations Per Second
+/**
+     * Set shooter power using a percentage (-1.0 to 1.0). Internally converts to volts.
+     * @param percent The percentage of full voltage (-1.0 to 1.0).
      */
-    public void runFlywheel(double rps) {
-        flywheelMotor1.setControl(m_velocitySetter.withVelocity(rps));
-    }
-
-    //Update the method to use percent output
-    public void runSushiPercent(double percent) {
-    // percent is a value from -1.0 to 1.0
-    feederMotor1.setControl(m_feederSetter.withOutput(percent));
+    public void setShooterVoltage(double percent) {
+        final double MAX_VOLTAGE = 12.0;
+        flywheelMotor1.setControl(m_voltageSetter.withOutput(percent * MAX_VOLTAGE));
     }
 
     /**
-     * Runs the feeder (sushi) motor.
-     * @param rps Rotations Per Second
+     * Set Shooter power using rpm.
+     * @param rpm The rpm to apply.
      */
-    public void runSushi(double rps) {
-        feederMotor1.setControl(m_velocitySetter.withVelocity(rps));
+    public void setShooterRPM(double rpm) {
+        flywheelMotor1.setControl(m_velocitySetter.withVelocity(rpm/60.0));
+    }
+
+
+    /**
+     * Set Feeder power using a percentage (-1.0 to 1.0). Internally converts to volts.
+     * @param percent The percentage of full voltage (-1.0 to 1.0).
+     */
+    public void setFeederVoltage(double percent) {
+        final double MAX_VOLTAGE = 12.0;
+        feederMotor1.setControl(m_voltageSetter.withOutput(percent * MAX_VOLTAGE));
     }
 
     /**
-     * Stops both the flywheel and the feeder motor.
+     * Checks if the flywheel is at the target RPM (converted from RPS).
+     * @param targetRPM The desired speed in Rotations Per Minute.
+     */
+    public boolean isReady(double targetRPM) {
+        double currentRPM = flywheelMotor1.getVelocity().getValueAsDouble() * 60.0;
+        return Math.abs(currentRPM - targetRPM) <= 25.0;
+    }
+
+    /**
+     * Stops both the flywheel and the feeder motors immediately.
      */
     public void stopAll() {
         flywheelMotor1.stopMotor();
         feederMotor1.stopMotor();
     }
 
-    /**
-     * Checks if the flywheel is within 1 RPS of the target.
-     */
-    public boolean isReady(double targetRPS)
-{
-// Check if we are at least at 95% of the target speed
-return flywheelMotor1.getVelocity().getValueAsDouble() >= (targetRPS * 0.95);
+    //to be tested with limelight
+    public boolean hasTarget() {
+        return LimelightHelpers.getTV(""); 
+    }
+
+    public double getDistanceToTarget() {
+        if (!hasTarget()) return 0.0;
+        RawFiducial[] targets = LimelightHelpers.getRawFiducials("");
+        return (targets.length > 0) ? targets[0].distToCamera : 0.0;
+    }
+
+    public void runFlywheelAuto() {
+        double targetRPM = hasTarget() ? shotMap.get(getDistanceToTarget()) : 100.0;
+        flywheelMotor1.setControl(m_velocitySetter.withVelocity(targetRPM/60.0));
     }
 }

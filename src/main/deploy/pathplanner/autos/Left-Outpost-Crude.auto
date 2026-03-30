@@ -7,25 +7,13 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Left-Hub"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Hub-Outpost"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Outpost-Hub"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
             "pathName": "Hub-Crude"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "shootready"
           }
         }
       ]

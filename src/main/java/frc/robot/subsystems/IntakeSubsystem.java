@@ -1,109 +1,147 @@
 package frc.robot.subsystems;
 
 import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkBase;
+import com.revrobotics.spark.SparkBase.ControlType;
+import com.revrobotics.spark.SparkClosedLoopController;
+import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.SparkMaxConfig;
-import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.RelativeEncoder;
+
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class IntakeSubsystem extends SubsystemBase {
-    // 1. Define Motors (CANSparkMax is now SparkMax)
-    private final SparkMax rollerMotor = new SparkMax(53, MotorType.kBrushless);
-    private final SparkMax pivotMotor = new SparkMax(54, MotorType.kBrushless);
 
-    // 2. Define Controller and Encoder
+    // Pivot (SparkMax)
+    private final SparkMax pivotMotor = new SparkMax(54, MotorType.kBrushless);
     private final SparkClosedLoopController pivotPID;
     private final RelativeEncoder pivotEncoder;
 
-    // Constants for your 36:1 setup
-    private final double GEAR_RATIO = 36.0;
-    private final double SPIKE_THRESHOLD = 35.0; // Amps
+    // Roller motors — KrakenX60 (TalonFX)
+    private final TalonFX rollerLeader   = new TalonFX(61);
+    private final TalonFX rollerFollower = new TalonFX(62);
 
-    // State tracking for spike logic
-    private double targetRotation = 0;
-    private boolean isAtTarget = false;
+    // Pivot gear ratio — degrees output per motor rotation
+    private final double GEAR_RATIO = 24.0;
+    private final double DEGREES_PER_ROTATION = 360.0 / GEAR_RATIO; // 15.0 deg/rot
+
+    // PID gains — tune these on the robot
+    private static final double kP = 0.05;
+    private static final double kI = 0.0;
+    private static final double kD = 0.0;
+    private static final double kFF = 0.0;
+
+    // Output clamp — limits max pivot speed during PID control
+    private static final double kMaxOutput =  0.5;
+    private static final double kMinOutput = -0.5;
+
+    private final VoltageOut m_voltageSetter = new VoltageOut(0);
+
+    // Soft limits in degrees — uncomment and set once range of motion is known
+    // private static final float SOFT_LIMIT_FWD_DEG = 90.0f;
+    // private static final float SOFT_LIMIT_REV_DEG =  0.0f;
 
     public IntakeSubsystem() {
-        // Create configuration objects
+        
         SparkMaxConfig pivotConfig = new SparkMaxConfig();
-        SparkMaxConfig rollerConfig = new SparkMaxConfig();
-
-        // Set conversion for 36:1 (360 / 36 = 10 degrees per motor rotation)
-        pivotConfig.encoder
-            .positionConversionFactor(360.0 / GEAR_RATIO) 
-            .velocityConversionFactor(360.0 / GEAR_RATIO / 60.0);
-
-        // Add P gain so the motor actually moves to the position
-        pivotConfig.closedLoop
-            .p(0.1) 
-            .outputRange(-0.5, 0.5);
-
-        // Configure Pivot
         pivotConfig
             .idleMode(IdleMode.kBrake)
-            .smartCurrentLimit(40);
-        
-        // Configure Rollers
-        rollerConfig
-            .idleMode(IdleMode.kCoast)
-            .smartCurrentLimit(40);
+            .smartCurrentLimit(30);
 
-        // Apply configurations
-        // kResetSafeParameters = restoreFactoryDefaults
-        // kPersistParameters = burnFlash
-        pivotMotor.configure(pivotConfig, SparkBase.ResetMode.kResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
-        rollerMotor.configure(rollerConfig, SparkBase.ResetMode.kResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
+        // Encoder conversion: motor rotations → degrees
+        pivotConfig.encoder
+            .positionConversionFactor(DEGREES_PER_ROTATION) // rotations  → degrees
+            .velocityConversionFactor(DEGREES_PER_ROTATION / 60.0); // RPM → deg/s
+
+        // PID configuration
+        pivotConfig.closedLoop
+            .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
+            .pid(kP, kI, kD)
+            .velocityFF(kFF)
+            .outputRange(kMinOutput, kMaxOutput);
+
+        // Soft limits — uncomment once range of motion is confirmed
+        // pivotConfig.softLimit
+        //     .forwardSoftLimit(SOFT_LIMIT_FWD_DEG)
+        //     .forwardSoftLimitEnabled(true)
+        //     .reverseSoftLimit(SOFT_LIMIT_REV_DEG)
+        //     .reverseSoftLimitEnabled(true);
+
+        pivotMotor.configure(
+            pivotConfig,
+            SparkBase.ResetMode.kResetSafeParameters,
+            SparkBase.PersistMode.kPersistParameters
+        );
 
         pivotPID = pivotMotor.getClosedLoopController();
         pivotEncoder = pivotMotor.getEncoder();
 
-        // Ensure we start at 0
         pivotEncoder.setPosition(0.0);
-        pivotConfig.closedLoop.p(0.1);
+
+        TalonFXConfiguration rollerConfig = new TalonFXConfiguration();
+        rollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        rollerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+        rollerConfig.CurrentLimits.StatorCurrentLimit = 60.0;
+
+        rollerLeader.getConfigurator().apply(rollerConfig);
+        rollerFollower.getConfigurator().apply(rollerConfig);
+
+        rollerFollower.setControl(new Follower(rollerLeader.getDeviceID(), MotorAlignmentValue.Opposed));
     }
 
-    @Override
-    public void periodic() {
-        double currentPos = pivotEncoder.getPosition();
-
-        // 1. Check if we have reached the target (within 2 degrees)
-        if (Math.abs(currentPos - targetRotation) < 2.0) {
-            isAtTarget = true;
-        }
-
-        // 2. ONLY check for spikes if we have reached the target
-        if (isAtTarget && pivotMotor.getOutputCurrent() > SPIKE_THRESHOLD) {
-            pivotMotor.stopMotor();
-        }
-        SmartDashboard.putNumber("Intake/Degrees", pivotEncoder.getPosition());
+    /**
+     * Commands the pivot to a target angle in degrees.
+     * 0° = home position at boot. Tune kP/kI/kD before using in match.
+     */
+    public void setPivotAngle(double targetDegrees) {
+        pivotPID.setReference(targetDegrees, ControlType.kPosition, ClosedLoopSlot.kSlot0);
     }
 
-    public void runPivotVoltage(double percent){
+    public double getPivotAngle() {
+        return pivotEncoder.getPosition();
+    }
+
+    public void runPivotVoltage(double percent) {
         pivotMotor.set(percent);
-    }
-
-
-    public void runRollers(double speed) {
-        rollerMotor.set(speed);
-    }
-
-    public void stopRollers() {
-        rollerMotor.stopMotor();
-    }
-
-    public void setPivotPosition(double positionDegrees) {
-        // The '0' at the end explicitly targets PID Slot 0
-        pivotPID.setSetpoint(positionDegrees, SparkBase.ControlType.kPosition, ClosedLoopSlot.kSlot0);
-
     }
 
     public void stopPivot() {
         pivotMotor.stopMotor();
+    }
+
+    /**
+     * Re-zeros the encoder. Call this when the arm is confirmed at its
+     * home/reference position (e.g., triggered by a limit switch).
+     */
+    public void zeroPivotEncoder() {
+        pivotEncoder.setPosition(0.0);
+    }
+
+    public void runRollers(double percent) {
+        rollerLeader.setControl(m_voltageSetter.withOutput(percent * 12.0));
+        SmartDashboard.putNumber("rollerRPM",
+            rollerLeader.getVelocity().getValueAsDouble() * 60.0);
+    }
+
+    public void stopRollers() {
+        rollerLeader.stopMotor();
+    }
+
+    @Override
+    public void periodic() {
+        SmartDashboard.putNumber("Pivot Angle (deg)", getPivotAngle());
+        SmartDashboard.putNumber("Pivot Output",      pivotMotor.getAppliedOutput());
     }
 }
