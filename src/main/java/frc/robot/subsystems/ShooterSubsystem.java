@@ -108,4 +108,8 @@ public class ShooterSubsystem extends SubsystemBase {
         double targetRPS = hasTarget() ? shotMap.get(getDistanceToTarget()) : 40.0;
         flywheelMotor1.setControl(m_velocitySetter.withVelocity(targetRPS));
     }
+
+    public double getFlywheelRPM() {
+        return flywheelMotor1.getVelocity().getValueAsDouble() * 60.0;
+    }
 }

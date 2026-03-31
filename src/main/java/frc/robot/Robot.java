@@ -41,6 +41,8 @@ public class Robot extends TimedRobot {
 
         //Lower KpDistance makes the robots corrections faster
         float KpDistance = -0.1f; 
+
+        private final ShooterSubsystem m_shooter = new ShooterSubsystem();
     }
 
     public static double calculateDistance(double velocity, double angleDeg, double shooterHeight, double targetHeight) {
@@ -110,16 +112,21 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopPeriodic() {
+        //Align swerve module if x button is pressed, checking periodically
+        if (joystick.getRawButton(kButtonX)) {
+            float shooterHeight = 0.559 //Height in meters
+            float targetHeight = 1.26 //Height of hub + hopper in meters
+            float velocity = m_shooter.getFlywheelRPM()
+            float angleDeg = 85
+            float desired_distance = calculateDistance(velocity, angleDeg, shooterHeight, targetHeight)
+            float current_distance = Estimate_Distance();
 
-        //Run this code for every robot update
-        float desired_distance = calculateDistance(velocity, angleDeg, shooterHeight, targetHeight) // Replace with auto shooter parameters
-        float current_distance = Estimate_Distance();
-
-        float distance_error = desired_distance - current_distance;
-        driving_adjust = KpDistance * distance_error;
-            
-        left_command += distance_adjust;
-        right_command += distance_adjust;
+            float distance_error = desired_distance - current_distance;
+            float driving_adjust = KpDistance * distance_error;
+                
+            left_command += driving_adjust;
+            right_command += driving_adjust;
+        }
     }
 
     @Override
