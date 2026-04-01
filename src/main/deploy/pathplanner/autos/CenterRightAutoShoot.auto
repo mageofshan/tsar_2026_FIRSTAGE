@@ -7,13 +7,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Simple Forward"
+            "pathName": "Mid-RightFuel"
           }
         },
         {
-          "type": "named",
+          "type": "path",
           "data": {
-            "name": "shootready"
+            "pathName": "RightFuelIntake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Right-Shoot"
           }
         }
       ]

@@ -105,7 +105,7 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public void runFlywheelAuto() {
-        double targetRPM = hasTarget() ? shotMap.get(getDistanceToTarget()) : 100.0;
+        double targetRPM = hasTarget() ? shotMap.get(getDistanceToTarget()) : flywheelMotor1.getVelocity().getValueAsDouble()*60;
         flywheelMotor1.setControl(m_velocitySetter.withVelocity(targetRPM/60.0));
     }
 }

@@ -76,12 +76,19 @@ public class RobotContainer {
         // pivot out while active
         NamedCommands.registerCommand(
             "pivot out",
-            Commands.startEnd(() -> m_intake.runPivotVoltage(0.2), m_intake::stopPivot, m_intake)
-        );
+            Commands.sequence(
+            Commands.runOnce(() -> m_intake.runPivotVoltage(0.8), m_intake),
+            new WaitCommand(0.8),
+            Commands.runOnce(() -> m_intake.stopPivot(), m_intake)
+            )        );
         //pivot in
         NamedCommands.registerCommand(
             "pivot in",
-            Commands.startEnd(() -> m_intake.runPivotVoltage(-0.2), m_intake::stopPivot, m_intake)
+            Commands.sequence(
+            Commands.runOnce(() -> m_intake.runPivotVoltage(-0.8), m_intake),
+            new WaitCommand(0.8),
+            Commands.runOnce(() -> m_intake.stopPivot(), m_intake)
+            )
         );
 
         // spin flywheel, stop all
@@ -105,7 +112,7 @@ public class RobotContainer {
         NamedCommands.registerCommand(
             "spin up flywheel",
             Commands.runOnce(() -> {
-                m_shooter.setShooterRPM(4000);
+                m_shooter.setShooterRPM(1400);
             }, m_shooter));
         
         //auto chooser
@@ -174,12 +181,12 @@ public class RobotContainer {
 
         // POV Right: pivot arm OUT/DOWN
         joystick.povRight()
-            .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(0.2), m_intake))
+            .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(0.8), m_intake))
             .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
 
         // POV Left: pivot arm IN/UP
         joystick.povLeft()
-            .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(-0.2), m_intake))
+            .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(0.8), m_intake))
             .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
 
             

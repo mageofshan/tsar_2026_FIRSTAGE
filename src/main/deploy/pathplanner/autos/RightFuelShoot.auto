@@ -7,13 +7,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Hub-Crude"
+            "pathName": "Right-RightFuel"
           }
         },
         {
-          "type": "named",
+          "type": "path",
           "data": {
-            "name": "shootready"
+            "pathName": "RightFuelIntake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Right-Shoot"
           }
         }
       ]

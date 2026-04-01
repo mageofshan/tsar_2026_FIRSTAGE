@@ -93,7 +93,7 @@ public class IntakeSubsystem extends SubsystemBase {
         TalonFXConfiguration rollerConfig = new TalonFXConfiguration();
         rollerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         rollerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        rollerConfig.CurrentLimits.StatorCurrentLimit = 60.0;
+        rollerConfig.CurrentLimits.StatorCurrentLimit = 40.0;
 
         rollerLeader.getConfigurator().apply(rollerConfig);
         rollerFollower.getConfigurator().apply(rollerConfig);
@@ -132,7 +132,7 @@ public class IntakeSubsystem extends SubsystemBase {
     public void runRollers(double percent) {
         rollerLeader.setControl(m_voltageSetter.withOutput(percent * 12.0));
         SmartDashboard.putNumber("rollerRPM",
-            rollerLeader.getVelocity().getValueAsDouble() * 60.0);
+            rollerLeader.getVelocity().getValueAsDouble() * 30.0);
     }
 
     public void stopRollers() {
