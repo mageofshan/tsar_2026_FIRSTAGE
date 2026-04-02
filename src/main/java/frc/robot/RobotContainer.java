@@ -234,19 +234,10 @@ public class RobotContainer {
 //             )
 //         );
 
-    public Command getAutonomousCommand() {
-        return new InstantCommand(() -> {
-            m_shooter.setShooterRPM(1400);
-        })
-        .andThen(new WaitCommand(3))
-        .andThen(new InstantCommand(() -> {
-            m_shooter.setFeederVoltage(1);
-            m_indexer.run(1);
-        }))
-        .andThen(new WaitCommand(5))
-        .andThen(new InstantCommand(() -> {
-            m_shooter.stopAll();
-            m_indexer.run(0);
-    }));
+    public Command getAutonomousCommand() 
+    {
+        // This returns the actual PathPlanner path selected on the dashboard
+    return autoChooser.getSelected();
+    
     }
 }
