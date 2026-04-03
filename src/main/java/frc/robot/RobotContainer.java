@@ -43,8 +43,8 @@ public class RobotContainer {
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
-    private final SwerveRequest.RobotCentric forwardStraight = new SwerveRequest.RobotCentric()
-            .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+    //private final SwerveRequest.RobotCentric forwardStraight = new SwerveRequest.RobotCentric()
+            //.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
     private final ShooterSubsystem m_shooter = new ShooterSubsystem();
     private final IndexerSubsystem m_indexer = new IndexerSubsystem();
@@ -144,22 +144,12 @@ public class RobotContainer {
         RobotModeTriggers.disabled().whileTrue(
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
         );
-
+        //brake button to stop bot moving (good for defense)
         joystick.a().whileTrue(drivetrain.applyRequest(() -> brake));
-        joystick.b().whileTrue(drivetrain.applyRequest(() ->
-            point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))
-        ));
-
-        joystick.povUp().whileTrue(drivetrain.applyRequest(() ->
-            forwardStraight.withVelocityX(0.5).withVelocityY(0))
-        );
-        joystick.povDown().whileTrue(drivetrain.applyRequest(() ->
-            forwardStraight.withVelocityX(-0.5).withVelocityY(0))
-        );
-
+        
         // sysId routines
         //joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-        joystick.back().whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+        //joystick.back().whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
         joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
         joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
         joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
@@ -179,25 +169,27 @@ public class RobotContainer {
             .whileTrue(new RunCommand(() -> m_intake.runRollers(0.85), m_intake))
             .onFalse(new InstantCommand(m_intake::stopRollers, m_intake));
 
-        // POV Right: pivot arm OUT/DOWN
-        joystick.povRight()
+        // POV up: pivot arm OUT/DOWN
+        joystick.povUp()
             .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(0.8), m_intake))
             .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
 
-        // POV Left: pivot arm IN/UP
-        joystick.povLeft()
-            .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(0.8), m_intake))
+        // POV down: pivot arm IN/UP
+        joystick.povDown()
+            .whileTrue(new RunCommand(() -> m_intake.runPivotVoltage(-0.8), m_intake))
             .onFalse(new InstantCommand(m_intake::stopPivot, m_intake));
 
-            
+        //run indexer by self 
         joystick.x()
             .whileTrue(new RunCommand(() -> m_indexer.run(0.9), m_indexer))
             .onFalse(new InstantCommand(m_indexer::stop, m_indexer));
 
+        //run flywheel based on limelight distance (shotmap to be configured)
         joystick.y()
             .whileTrue(new RunCommand(() -> m_shooter.runFlywheelAuto(), m_shooter))
             .onFalse(new InstantCommand(m_shooter::stopAll, m_shooter));
 
+        //flywheel to sticking hub rpm (1400)
         joystick.rightTrigger().whileTrue(
                 Commands.runOnce(() -> m_shooter.setShooterRPM(1400), m_shooter)
         ).onFalse(
@@ -206,10 +198,9 @@ public class RobotContainer {
             }, m_shooter)
         );
         
-        // Right Bumper: spin flywheel + sushi together immediately (no wait)
+        // Right Bumper: indexer + sushi together
         joystick.rightBumper()
             .whileTrue(new RunCommand(() -> {
-                m_shooter.setShooterRPM(1400);
                 m_shooter.setFeederVoltage(1.0);
                 m_indexer.run(1.0);
             }, m_shooter, m_indexer))
