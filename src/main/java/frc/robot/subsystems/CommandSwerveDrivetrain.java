@@ -285,7 +285,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
 
     @Override
-    public void periodic() {
+    public void periodic() 
+    {
         /*
          * Periodically try to apply the operator perspective.
          * If we haven't applied the operator perspective before, then we should apply it regardless of DS state.
@@ -293,11 +294,20 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
          * Otherwise, only check and apply the operator perspective if the DS is disabled.
          * This ensures driving behavior doesn't change until an explicit disable event occurs during testing.
          */
-        if (!m_hasAppliedOperatorPerspective || DriverStation.isDisabled()) {
-            DriverStation.getAlliance().ifPresent(allianceColor -> {
-                setOperatorPerspectiveForward(kBlueAlliancePerspectiveRotation);
-                m_hasAppliedOperatorPerspective = true;
-        });            
+        @Override
+public void periodic() {
+    if (!m_hasAppliedOperatorPerspective || DriverStation.isDisabled()) {
+        DriverStation.getAlliance().ifPresent(allianceColor -> {
+            // Use the actual alliance color to pick the rotation
+            this.setOperatorPerspectiveForward(
+                allianceColor == Alliance.Red 
+                    ? kRedAlliancePerspectiveRotation 
+                    : kBlueAlliancePerspectiveRotation
+            );
+            m_hasAppliedOperatorPerspective = true;
+        });
+    }
+}       
         }
     }
 
