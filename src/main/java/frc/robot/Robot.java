@@ -51,7 +51,8 @@ public class Robot extends TimedRobot {
 
     @Override
     public void disabledPeriodic() {
-        if (!m_hasAppliedOperatorPerspective) {
+        /*
+         * if (!m_hasAppliedOperatorPerspective) {
             DriverStation.getAlliance().ifPresent(alliance -> {
                 m_robotContainer.drivetrain.setOperatorPerspectiveForward(
                     alliance == Alliance.Red
@@ -61,6 +62,7 @@ public class Robot extends TimedRobot {
                 m_hasAppliedOperatorPerspective = true;
             });
         }
+         */   
     }
 
     @Override
