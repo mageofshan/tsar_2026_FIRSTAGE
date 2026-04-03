@@ -6,6 +6,8 @@ package frc.robot;
 
 import com.ctre.phoenix6.HootAutoReplay;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -17,6 +19,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 
 public class Robot extends TimedRobot {
+    private boolean m_hasAppliedOperatorPerspective=false;
     private Command m_autonomousCommand;
 
     private final RobotContainer m_robotContainer;
@@ -47,13 +50,25 @@ public class Robot extends TimedRobot {
     public void disabledInit() {}
 
     @Override
-    public void disabledPeriodic() {}
+    public void disabledPeriodic() {
+        if (!m_hasAppliedOperatorPerspective) {
+            DriverStation.getAlliance().ifPresent(alliance -> {
+                m_robotContainer.drivetrain.setOperatorPerspectiveForward(
+                    alliance == Alliance.Red
+                        ? Rotation2d.fromDegrees(180)
+                        : Rotation2d.fromDegrees(0)
+                );
+                m_hasAppliedOperatorPerspective = true;
+            });
+        }
+    }
 
     @Override
     public void disabledExit() {}
 
     @Override
     public void autonomousInit() {
+        m_hasAppliedOperatorPerspective=false;
         //m_robotContainer.drivetrain.removeDefaultCommand(); // why was this here? it kills joysticks
         m_autonomousCommand = m_robotContainer.getAutonomousCommand();
         if (m_autonomousCommand != null) {

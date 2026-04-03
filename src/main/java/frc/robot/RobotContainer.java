@@ -63,14 +63,14 @@ public class RobotContainer {
         //pathplanner commands
         // run rollers until command ends
         NamedCommands.registerCommand(
-            "run rollers 0.5",
-            Commands.startEnd(() -> m_intake.runRollers(0.5), m_intake::stopRollers, m_intake)
+            "run rollers 0.7",
+            Commands.startEnd(() -> m_intake.runRollers(0.7), m_intake::stopRollers, m_intake)
         );
 
         // run rollers backwards until command ends
         NamedCommands.registerCommand(
-            "run rollers -0.5",
-            Commands.startEnd(() -> m_intake.runRollers(-0.5), m_intake::stopRollers, m_intake)
+            "run rollers -0.7",
+            Commands.startEnd(() -> m_intake.runRollers(-0.7), m_intake::stopRollers, m_intake)
         );
 
         // pivot out while active
@@ -102,7 +102,7 @@ public class RobotContainer {
             "shootready",
             Commands.sequence(
             Commands.runOnce(() -> m_shooter.setShooterRPM(1400), m_shooter),
-            new WaitCommand(3.0),
+            new WaitCommand(2.0),
             Commands.runOnce(() -> m_shooter.setFeederVoltage(1.0), m_shooter).alongWith(Commands.runOnce(() -> m_indexer.run(1.0), m_indexer)),
             new WaitCommand(3.0),
             Commands.runOnce(() -> m_shooter.setFeederVoltage(0.0), m_shooter)
@@ -130,14 +130,24 @@ public class RobotContainer {
     }
 
     private void configureBindings() {
-        
-        drivetrain.setDefaultCommand(
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(-joystick.getLeftY() * MaxSpeed)
-                    .withVelocityY(-joystick.getLeftX() * MaxSpeed)
-                    .withRotationalRate(-joystick.getRightX() * MaxAngularRate)
-            )
-        );
+        /*
+         *  if (DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red) {
+            drivetrain.setDefaultCommand(
+                drivetrain.applyRequest(() ->
+                    drive.withVelocityX(joystick.getLeftY() * MaxSpeed)
+                        .withVelocityY(joystick.getLeftX() * MaxSpeed)
+                        .withRotationalRate(joystick.getRightX() * MaxAngularRate)
+                )
+            );
+        }
+         */
+            drivetrain.setDefaultCommand(
+                drivetrain.applyRequest(() ->
+                    drive.withVelocityX(-joystick.getLeftY() * MaxSpeed)
+                        .withVelocityY(-joystick.getLeftX() * MaxSpeed)
+                        .withRotationalRate(-joystick.getRightX() * MaxAngularRate)
+                )
+            );
 
         // Idle while disabled
         final var idle = new SwerveRequest.Idle();
@@ -161,12 +171,12 @@ public class RobotContainer {
         // --- INTAKE ---
         // Left Trigger: run rollers inward
         joystick.leftTrigger()
-            .whileTrue(new RunCommand(() -> m_intake.runRollers(-0.85), m_intake))
+            .whileTrue(new RunCommand(() -> m_intake.runRollers(-0.75), m_intake))
             .onFalse(new InstantCommand(m_intake::stopRollers, m_intake));
 
         // Left Bumper: run rollers outward (reverse/eject)
         joystick.leftBumper()
-            .whileTrue(new RunCommand(() -> m_intake.runRollers(0.85), m_intake))
+            .whileTrue(new RunCommand(() -> m_intake.runRollers(0.75), m_intake))
             .onFalse(new InstantCommand(m_intake::stopRollers, m_intake));
 
         // POV up: pivot arm OUT/DOWN
@@ -205,7 +215,7 @@ public class RobotContainer {
                 m_indexer.run(1.0);
             }, m_shooter, m_indexer))
             .onFalse(new InstantCommand(() -> {
-                m_shooter.stopAll();
+                m_shooter.setFeederVoltage(0.0);
                 m_indexer.run(0.0);
             }, m_shooter, m_indexer));
 

@@ -29,9 +29,9 @@ public class ShooterSubsystem extends SubsystemBase {
     public ShooterSubsystem() { 
         configureMotors();
         //test
-        shotMap.put(1.0, 1400.0);
-        shotMap.put(3.0, 1500.0);
-        shotMap.put(5.0, 1600.0);
+        shotMap.put(1.0, 1500.0);
+        shotMap.put(3.0, 1600.0);
+        shotMap.put(5.0, 1700.0);
     }
 
     private void configureMotors() {
